@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Packaging Material Recommender</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .loading {
+            display: none;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .recommendation-card {
+            transition: transform 0.3s ease;
+        }
+        .recommendation-card:hover {
+            transform: translateY(-5px);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <nav class="bg-blue-600 text-white p-4 shadow-lg">
+        <div class="container mx-auto">
+            <h1 class="text-2xl font-bold"><i class="bi bi-box-seam"></i> Smart Packaging Material Recommender</h1>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4">
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- Input Form -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-4">Product Requirements</h2>
+                <form id="recommendationForm" class="space-y-4">
+                    <div>
+                        <label class="block text-gray-700">Product Category</label>
+                        <select id="productType" class="w-full p-2 border rounded">
+                            <option value="">Select Product Category</option>
+                            <option value="dairy">Dairy Products</option>
+                            <option value="meat">Meat & Seafood</option>
+                            <option value="snacks">Snacks & Chips</option>
+                            <option value="beverages">Beverages</option>
+                            <option value="pharmaceuticals">Pharmaceuticals</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-700">Required Shelf Life</label>
+                        <select id="shelfLife" class="w-full p-2 border rounded">
+                            <option value="">Select Shelf Life</option>
+                            <option value="short">Short-term (< 3 months)</option>
+                            <option value="medium">Medium-term (3-6 months)</option>
+                            <option value="long">Long-term (> 6 months)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-700">Barrier Level Required</label>
+                        <select id="barrierLevel" class="w-full p-2 border rounded">
+                            <option value="">Select Barrier Level</option>
+                            <option value="high">High Barrier</option>
+                            <option value="medium">Medium Barrier</option>
+                            <option value="low">Low Barrier</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-700">Cost Sensitivity</label>
+                        <select id="costSensitivity" class="w-full p-2 border rounded">
+                            <option value="">Select Cost Sensitivity</option>
+                            <option value="low">Low (Premium)</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High (Economic)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-700">Sustainability Preference</label>
+                        <div class="flex gap-4">
+                            <label class="flex items-center">
+                                <input type="radio" name="sustainability" value="yes" class="mr-2">
+                                Yes
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="sustainability" value="no" class="mr-2">
+                                No
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition">
+                        Get Recommendations
+                    </button>
+                </form>
+            </div>
+
+            <!-- Results Section -->
+            <div class="space-y-4">
+                <div id="loading" class="loading flex justify-center items-center">
+                    <i class="bi bi-arrow-repeat text-4xl text-blue-600"></i>
+                </div>
+                
+                <div id="recommendations" class="space-y-4 hidden">
+                    <h2 class="text-xl font-semibold">Top Recommendations</h2>
+                    <div id="recommendationsList" class="space-y-4"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const materialDatabase = {
+            dairy: {
+                high: ['EVOH', 'PVDC', 'Aluminum Foil'],
+                medium: ['PET', 'HDPE', 'Nylon (BOPA)'],
+                low: ['LDPE', 'PP']
+            },
+            meat: {
+                high: ['EVOH/PE Multilayer', 'PA/PE Multilayer', 'Aluminum Foil'],
+                medium: ['Nylon (BOPA)', 'PVDC', 'PET'],
+                low: ['HDPE', 'PP']
+            },
+            snacks: {
+                high: ['MetPET', 'EVOH', 'Aluminum Foil'],
+                medium: ['BOPP', 'PET', 'MetOPP'],
+                low: ['LDPE', 'PP']
+            },
+            beverages: {
+                high: ['PET', 'EVOH', 'Aluminum Foil'],
+                medium: ['Nylon (BOPA)', 'HDPE'],
+                low: ['LDPE', 'PP']
+            },
+            pharmaceuticals: {
+                high: ['PVDC', 'Aluminum Foil', 'PCTFE'],
+                medium: ['PET', 'Nylon (BOPA)'],
+                low: ['HDPE', 'PP']
+            }
+        };
+
+        document.getElementById('recommendationForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            document.getElementById('loading').style.display = 'flex';
+            document.getElementById('recommendations').classList.add('hidden');
+
+            setTimeout(() => {
+                const productType = document.getElementById('productType').value;
+                const barrierLevel = document.getElementById('barrierLevel').value;
+                const costSensitivity = document.getElementById('costSensitivity').value;
+                const sustainability = document.querySelector('input[name="sustainability"]:checked')?.value;
+
+                const recommendations = getRecommendations(productType, barrierLevel);
+                displayRecommendations(recommendations);
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('recommendations').classList.remove('hidden');
+            }, 1500);
+        });
+
+        function getRecommendations(productType, barrierLevel) {
+            return materialDatabase[productType]?.[barrierLevel] || [];
+        }
+
+        function displayRecommendations(recommendations) {
+            const container = document.getElementById('recommendationsList');
+            container.innerHTML = '';
+
+            recommendations.forEach((material, index) => {
+                const card = document.createElement('div');
+                card.className = 'recommendation-card bg-white p-4 rounded-lg shadow-md border-l-4 border-blue-600';
+                card.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="text-lg font-semibold">${index + 1}. ${material}</h3>
+                            <p class="text-gray-600">Recommended for your requirements</p>
+                        </div>
+                        <i class="bi bi-check-circle-fill text-green-500 text-2xl"></i>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            if (recommendations.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                        <p class="text-yellow-700">No recommendations found for the selected criteria.</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
